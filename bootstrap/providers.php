@@ -3,6 +3,7 @@
 return [
     App\Providers\AppServiceProvider::class,
     App\Providers\FortifyServiceProvider::class,
-    App\Providers\FoundationServiceProvider::class,
-    App\Providers\InvetoryServiceProvider::class,
+    App\Src\Foundation\Providers\FoundationServiceProvider::class,
+    App\Src\Inventory\Providers\InventoryServiceProvider::class,
+    App\Src\POS\Providers\PosServiceProvider::class,
 ];

@@ -36,4 +36,12 @@ Route::get('inventory/reports/stock/download', [App\Http\Controllers\Inventory\S
     ->middleware(['auth', 'verified'])
     ->name('inventory.reports.stock.download');
 
+Route::get('pos/cards', App\Livewire\POS\Cards\Index::class)
+    ->middleware(['auth', 'verified'])
+    ->name('pos.cards.index');
+
+Route::get('pos/register', App\Livewire\POS\Register\Index::class)
+    ->middleware(['auth', 'verified'])
+    ->name('pos.register.index');
+
 require __DIR__ . '/settings.php';

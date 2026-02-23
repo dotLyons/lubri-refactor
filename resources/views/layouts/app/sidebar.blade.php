@@ -48,6 +48,18 @@
                     {{ __('Stock') }}
                 </flux:sidebar.item>
             </flux:sidebar.group>
+            
+            <flux:sidebar.group :heading="__('POS (Caja)')" expandable :expanded="request()->routeIs('pos.*')"
+                class="grid">
+                <flux:sidebar.item icon="wallet" :href="route('pos.register.index')"
+                    :current="request()->routeIs('pos.register.index')" wire:navigate>
+                    {{ __('Estado de Caja') }}
+                </flux:sidebar.item>
+                <flux:sidebar.item icon="credit-card" :href="route('pos.cards.index')"
+                    :current="request()->routeIs('pos.cards.index')" wire:navigate>
+                    {{ __('Tarjetas') }}
+                </flux:sidebar.item>
+            </flux:sidebar.group>
         </flux:sidebar.nav>
 
         <flux:spacer />

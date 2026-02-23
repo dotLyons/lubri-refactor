@@ -2,8 +2,6 @@
 
 namespace App\Providers;
 
-use App\Src\Foundation\Providers\FoundationServiceProvider;
-use App\Src\Inventory\Providers\InventoryServiceProvider;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -30,8 +28,6 @@ class AppServiceProvider extends ServiceProvider
         }
 
         $this->configureDefaults();
-        $this->app->register(FoundationServiceProvider::class);
-        $this->app->register(InventoryServiceProvider::class);
     }
 
     /**
