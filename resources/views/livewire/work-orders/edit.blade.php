@@ -132,108 +132,64 @@
                         
                         <div class="relative z-10">
                             <h4 class="text-xl font-black uppercase tracking-wider mb-3 drop-shadow-sm flex justify-between items-center border-b border-indigo-400/30 pb-4">
-                                Cobro / Finalizar 
-                                <flux:icon.banknotes class="size-7 text-white/50" />
+                                Pre-Facturación 
+                                <flux:icon.document-text class="size-7 text-white/50" />
                             </h4>
                             
                             <p class="text-indigo-100 text-sm mb-6 leading-relaxed bg-indigo-900/30 p-3 rounded-lg border border-indigo-400/20 text-justify">
-                                Al cobrar el comprobante, el turno se cerrará automáticamente y el dinero ingresará a la base de la <strong>Caja Registradora</strong> activa.
+                                Al generar la factura, el ticket pasará al área de cobranzas donde se podrán imputar múltiples pagos, transferencias o financiar con tarjeta.
                             </p>
                             
-                            <div class="space-y-5 font-mono">
-                                <div>
-                                    <label class="block text-[11px] font-bold uppercase tracking-widest text-indigo-200 mb-2">Medio de Pago del Cliente</label>
-                                    <select wire:model.live="paymentMethod" class="w-full bg-indigo-900/50 border border-indigo-400/40 text-white text-base rounded-lg focus:ring-4 focus:ring-indigo-300/30 focus:border-indigo-300 py-3 shadow-inner">
-                                        @foreach(\App\Src\POS\Enums\PaymentMethod::cases() as $method)
-                                            <option value="{{ $method->value }}">{{ $method->label() }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-
-                                @if(in_array($paymentMethod, ['credit_card', 'debit_card']))
-                                    <div class="mt-4">
-                                        <label class="block text-[11px] font-bold uppercase tracking-widest text-indigo-200 mb-2">Seleccione una Tarjeta</label>
-                                        <select wire:model.live="selectedCardId" class="w-full bg-indigo-900/50 border border-indigo-400/40 text-white text-base rounded-lg focus:ring-4 focus:ring-indigo-300/30 focus:border-indigo-300 py-3 shadow-inner">
-                                            <option value="">Seleccionar Tarjeta...</option>
-                                            @foreach($cards as $card)
-                                                <option value="{{ $card->id }}">{{ $card->name }}</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                @endif
-
-                                @if($selectedCardId)
-                                    <div class="mt-4">
-                                        <label class="block text-[11px] font-bold uppercase tracking-widest text-indigo-200 mb-2">Plan de Cuotas</label>
-                                        <select wire:model.live="selectedPlanId" class="w-full bg-indigo-900/50 border border-indigo-400/40 text-white text-base rounded-lg focus:ring-4 focus:ring-indigo-300/30 focus:border-indigo-300 py-3 shadow-inner">
-                                            <option value="">Seleccionar Plan...</option>
-                                            @foreach($plans as $plan)
-                                                <option value="{{ $plan->id }}">
-                                                    {{ $plan->name }} 
-                                                    @if($plan->surcharge_percentage > 0)
-                                                        (+{{ (float) $plan->surcharge_percentage }}%)
-                                                    @endif
-                                                </option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                @endif
+                            <div class="relative z-10 w-full mt-6 pt-6 border-t border-indigo-500/50">
+                                <button wire:click="generateInvoice" wire:confirm="¿Estás seguro de generar la factura para esta orden?" class="w-full bg-white text-indigo-900 rounded-xl font-black text-xl py-4 transition-all shadow-xl hover:-translate-y-1 hover:shadow-indigo-900/50 active:translate-y-0 active:scale-95 duration-200 uppercase tracking-widest flex flex-col items-center justify-center gap-1">
+                                    <span>IR A COBRAR</span>
+                                    <span class="bg-indigo-100/50 text-indigo-900 px-3 py-1 rounded-md text-sm">${{ number_format($totalAmount, 2) }}</span>
+                                </button>
                             </div>
-
-                            @if(session()->has('error_payment'))
-                                <div class="mt-5 p-3 sm:p-4 bg-red-500 text-white rounded-lg border border-red-400 shadow-md font-medium text-sm flex items-start gap-3">
-                                    <flux:icon.exclamation-triangle class="size-5 shrink-0 mt-0.5" />
-                                    <span>{{ session('error_payment') }}</span>
-                                </div>
-                            @endif
-                        </div>
-                        
-                        <div class="relative z-10 w-full mt-6 pt-6 border-t border-indigo-500/50">
-                            @if($surchargeAmount > 0)
-                                <div class="mb-4 bg-indigo-900/40 rounded-lg p-3 border border-indigo-400/20 text-sm space-y-1.5">
-                                    <div class="flex justify-between text-indigo-200">
-                                        <span>Subtotal:</span>
-                                        <span>${{ number_format($baseTotalAmount, 2) }}</span>
-                                    </div>
-                                    <div class="flex justify-between text-indigo-300">
-                                        <span>Recargo Tarjeta:</span>
-                                        <span>+${{ number_format($surchargeAmount, 2) }}</span>
-                                    </div>
-                                    <div class="flex justify-between text-white font-bold pt-1 border-t border-indigo-400/20 mt-1">
-                                        <span>Total Final:</span>
-                                        <span>${{ number_format($totalAmount, 2) }}</span>
-                                    </div>
-                                </div>
-                            @endif
-                            <button wire:click="chargeAndClose" wire:confirm="¿Estás completamente seguro de cobrar y cerrar la orden definitivamente?" class="w-full bg-white text-indigo-900 rounded-xl font-black text-xl py-4 transition-all shadow-xl hover:-translate-y-1 hover:shadow-indigo-900/50 active:translate-y-0 active:scale-95 duration-200 uppercase tracking-widest flex flex-col items-center justify-center gap-1">
-                                <span>COBRAR ORDEN</span>
-                                <span class="bg-indigo-100/50 text-indigo-900 px-3 py-1 rounded-md text-sm">${{ number_format($totalAmount, 2) }}</span>
-                            </button>
                         </div>
                     </div>
                 @else
                     {{-- Read Only Details Block for Closed Orders --}}
-                    <div class="bg-emerald-50 dark:bg-emerald-900/20 rounded-2xl p-6 shadow-sm border border-emerald-200 dark:border-emerald-800 sticky top-8">
-                        <div class="flex items-center gap-4 mb-5 border-b border-emerald-200 dark:border-emerald-800 pb-5">
-                            <div class="size-12 rounded-full bg-emerald-100 dark:bg-emerald-800 text-emerald-600 dark:text-emerald-300 flex items-center justify-center shrink-0">
-                                <flux:icon.check-circle class="size-7" />
+                        <div class="bg-emerald-50 dark:bg-emerald-900/20 rounded-2xl p-6 shadow-sm border border-emerald-200 dark:border-emerald-800 sticky top-8">
+                            <div class="flex items-center gap-4 mb-5 border-b border-emerald-200 dark:border-emerald-800 pb-5">
+                                <div class="size-12 rounded-full bg-emerald-100 dark:bg-emerald-800 text-emerald-600 dark:text-emerald-300 flex items-center justify-center shrink-0">
+                                    <flux:icon.check-circle class="size-7" />
+                                </div>
+                                <div>
+                                    <h4 class="text-emerald-900 dark:text-emerald-100 text-lg font-bold leading-none mb-1.5">Orden Cobrada</h4>
+                                    <p class="text-xs text-emerald-600/80 dark:text-emerald-400 font-medium">Este servicio fue abonado y cerrado. El ticket ya fue cursado en Caja.</p>
+                                </div>
                             </div>
-                            <div>
-                                <h4 class="text-emerald-900 dark:text-emerald-100 text-lg font-bold leading-none mb-1.5">Orden Cobrada</h4>
-                                <p class="text-xs text-emerald-600/80 dark:text-emerald-400 font-medium">Este servicio fue abonado y cerrado. El ticket ya fue cursado en Caja.</p>
+                            <div class="bg-white/70 dark:bg-black/20 rounded-xl p-5 border border-emerald-100 dark:border-emerald-800/50 space-y-3">
+                                <div class="flex justify-between items-center text-zinc-900 dark:text-white">
+                                    <span class="text-sm font-semibold text-zinc-500">Monto Base:</span>
+                                    <span class="text-lg font-medium text-zinc-700 dark:text-zinc-300">${{ number_format($totalAmount, 2) }}</span>
+                                </div>
+                                @if($workOrder->invoice)
+                                    <div class="flex justify-between items-center text-zinc-900 dark:text-white pt-2 border-t border-emerald-100 dark:border-emerald-800/50 mt-2">
+                                        <div class="flex flex-col">
+                                            <span class="text-sm font-semibold text-emerald-700 dark:text-emerald-400">Total Facturado:</span>
+                                            <span class="text-xs text-zinc-500">Incluye recargos por intereses financieros</span>
+                                        </div>
+                                        <span class="text-xl font-black text-emerald-600 dark:text-emerald-400">${{ number_format($workOrder->invoice->total_amount, 2) }}</span>
+                                    </div>
+                                        <div class="mt-4 pt-3 border-t border-emerald-100 dark:border-emerald-800/50 flex flex-col gap-2">
+                                            <div class="flex justify-between items-center text-sm">
+                                                <span class="text-zinc-500">Estado de Factura:</span>
+                                                <flux:badge size="sm" color="{{ $workOrder->invoice->status->value === 'paid' ? 'emerald' : 'amber' }}">{{ $workOrder->invoice->status->label() }}</flux:badge>
+                                            </div>
+                                            <div class="flex gap-2 mt-2">
+                                                <flux:button href="{{ route('work-orders.pdf', $workOrder->id) }}" variant="subtle" size="sm" icon="printer" class="w-full flex-1" target="_blank">Imprimir Orden</flux:button>
+                                                <flux:button href="{{ route('invoices.pay', $workOrder->invoice->id) }}" variant="subtle" size="sm" icon="banknotes" class="w-full flex-1">Ver Pagos</flux:button>
+                                            </div>
+                                        </div>
+                                @endif
                             </div>
                         </div>
-                        <div class="bg-white/70 dark:bg-black/20 rounded-xl p-5 border border-emerald-100 dark:border-emerald-800/50 space-y-3">
-                            <div class="flex justify-between items-center text-zinc-900 dark:text-white">
-                                <span class="text-sm font-semibold text-zinc-500">Monto Final Abonado:</span>
-                                <span class="text-xl font-black text-emerald-600 dark:text-emerald-400">${{ number_format($totalAmount, 2) }}</span>
-                            </div>
-                        </div>
-                    </div>
-                @endif
+                    @endif
+                </div>
             </div>
-        </div>
-    @endif
+        @endif
 
     {{-- Product Search Modal --}}
     <flux:modal name="search-products" class="md:w-4/5 max-w-5xl">

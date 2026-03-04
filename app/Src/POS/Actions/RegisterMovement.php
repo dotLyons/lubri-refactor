@@ -20,7 +20,8 @@ class RegisterMovement
         ?int $cardPlanId = null,
         ?string $description = null,
         bool $isManual = false,
-        ?string $passcode = null
+        ?string $passcode = null,
+        ?string $transactionGroupId = null
     ): CashRegisterMovement {
         // Validation for manual adjustments passcode
         if ($isManual) {
@@ -43,6 +44,7 @@ class RegisterMovement
             'card_plan_id' => $cardPlanId,
             'description' => $description,
             'is_manual' => $isManual,
+            'transaction_group_id' => $transactionGroupId,
         ]);
     }
 }

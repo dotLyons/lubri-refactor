@@ -1,6 +1,5 @@
 <?php
 
-use App\Livewire\TestComponent;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -10,7 +9,6 @@ Route::get('/', function () {
 Route::view('dashboard', 'dashboard')
     ->middleware(['auth', 'verified'])
     ->name('dashboard');
-
 
 Route::get('test-component', App\Livewire\TestComponent::class)
     ->middleware(['auth', 'verified'])
@@ -56,4 +54,28 @@ Route::get('work-orders/{id}/manage', App\Livewire\WorkOrders\Edit::class)
     ->middleware(['auth', 'verified'])
     ->name('work-orders.edit');
 
-require __DIR__ . '/settings.php';
+Route::get('work-orders/{workOrder}/pdf', [App\Http\Controllers\WorkOrders\WorkOrderPdfController::class, 'download'])
+    ->middleware(['auth', 'verified'])
+    ->name('work-orders.pdf');
+
+Route::get('budgets', App\Livewire\Budget\Index::class)
+    ->middleware(['auth', 'verified'])
+    ->name('budgets.index');
+
+Route::get('budgets/{id}/manage', App\Livewire\Budget\Edit::class)
+    ->middleware(['auth', 'verified'])
+    ->name('budgets.edit');
+
+Route::get('invoices/{id}/pay', App\Livewire\Invoices\Pay::class)
+    ->middleware(['auth', 'verified'])
+    ->name('invoices.pay');
+
+Route::get('pos/invoices', App\Livewire\Invoices\Index::class)
+    ->middleware(['auth', 'verified'])
+    ->name('pos.invoices.index');
+
+Route::get('invoices/{invoice}/pdf', [App\Http\Controllers\Invoices\InvoicePdfController::class, 'download'])
+    ->middleware(['auth', 'verified'])
+    ->name('invoices.pdf');
+
+require __DIR__.'/settings.php';

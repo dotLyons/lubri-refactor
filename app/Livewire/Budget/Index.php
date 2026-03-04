@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Livewire\WorkOrders;
+namespace App\Livewire\Budget;
 
-use App\Src\WorkOrders\Models\WorkOrder;
+use App\Src\Budget\Models\Budget;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -13,28 +13,28 @@ class Index extends Component
     public string $search = '';
 
     protected $listeners = [
-        'work-order-created' => '$refresh',
-        'work-order-updated' => '$refresh',
-        'work-order-deleted' => '$refresh',
+        'budget-created' => '$refresh',
+        'budget-updated' => '$refresh',
+        'budget-deleted' => '$refresh',
     ];
 
-    public function deleteWorkOrder($id)
+    public function deleteBudget($id)
     {
-        $order = WorkOrder::findOrFail($id);
+        $budget = Budget::findOrFail($id);
 
-        if ($order->status->value === 'closed') {
+        if ($budget->status->value === 'closed') {
             return;
         }
 
-        $order->items()->delete();
-        $order->delete();
+        $budget->items()->delete();
+        $budget->delete();
 
-        $this->dispatch('work-order-deleted');
+        $this->dispatch('budget-deleted');
     }
 
     public function render()
     {
-        $workOrders = WorkOrder::with(['customer', 'vehicle', 'user', 'items', 'invoice'])
+        $budgets = Budget::with(['customer', 'vehicle', 'user', 'items'])
             ->when($this->search, function ($query) {
                 $query->whereHas('customer', function ($q) {
                     $q->where('first_name', 'like', "%{$this->search}%")
@@ -47,8 +47,8 @@ class Index extends Component
             ->latest()
             ->paginate(10);
 
-        return view('livewire.work-orders.index', [
-            'workOrders' => $workOrders,
+        return view('livewire.budget.index', [
+            'budgets' => $budgets,
         ]);
     }
 }

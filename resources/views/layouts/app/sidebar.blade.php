@@ -59,6 +59,10 @@
                     :current="request()->routeIs('pos.cards.index')" wire:navigate>
                     {{ __('Tarjetas') }}
                 </flux:sidebar.item>
+                <flux:sidebar.item icon="document-currency-dollar" :href="route('pos.invoices.index')"
+                    :current="request()->routeIs('pos.invoices.*') || request()->routeIs('invoices.pay')" wire:navigate>
+                    {{ __('Facturación') }}
+                </flux:sidebar.item>
             </flux:sidebar.group>
 
             <flux:sidebar.item icon="users" :href="route('customers.index')" :current="request()->routeIs('customers.*')" wire:navigate>
@@ -67,6 +71,10 @@
 
             <flux:sidebar.item icon="document-text" :href="route('work-orders.index')" :current="request()->routeIs('work-orders.*')" wire:navigate>
                 {{ __('Órdenes de Trabajo') }}
+            </flux:sidebar.item>
+
+            <flux:sidebar.item icon="calculator" :href="route('budgets.index')" :current="request()->routeIs('budgets.*')" wire:navigate>
+                {{ __('Presupuestos') }}
             </flux:sidebar.item>
         </flux:sidebar.nav>
 

@@ -1,64 +1,53 @@
 <?php
 
-namespace App\Src\POS\Models;
+namespace App\Src\Invoices\Models;
 
 use App\Models\User;
-use App\Src\POS\Enums\MovementType;
 use App\Src\POS\Enums\PaymentMethod;
+use App\Src\POS\Models\CardPlan;
+use App\Src\POS\Models\CashRegisterMovement;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
-class CashRegisterMovement extends Model
+class InvoicePayment extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'cash_register_id',
-        'transaction_group_id',
+        'invoice_id',
         'user_id',
-        'type',
+        'cash_register_movement_id',
         'amount',
         'payment_method',
         'card_plan_id',
         'description',
-        'is_manual',
     ];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
     protected function casts(): array
     {
         return [
-            'type' => MovementType::class,
             'amount' => 'decimal:2',
             'payment_method' => PaymentMethod::class,
-            'is_manual' => 'boolean',
         ];
     }
 
-    /**
-     * Get the cash register session this movement belongs to.
-     */
-    public function cashRegister(): BelongsTo
+    public function invoice(): BelongsTo
     {
-        return $this->belongsTo(CashRegister::class);
+        return $this->belongsTo(Invoice::class);
     }
 
-    /**
-     * Get the user who made the movement.
-     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
-    /**
-     * Get the card plan used for this movement (if any).
-     */
+    public function cashRegisterMovement(): BelongsTo
+    {
+        return $this->belongsTo(CashRegisterMovement::class);
+    }
+
     public function cardPlan(): BelongsTo
     {
         return $this->belongsTo(CardPlan::class);

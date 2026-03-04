@@ -135,49 +135,106 @@
                                     <th scope="col" class="px-6 py-3.5 text-right text-xs font-semibold text-zinc-500 uppercase tracking-wider dark:text-zinc-400">Monto</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-zinc-200 dark:divide-zinc-700 bg-white dark:bg-zinc-900">
-                                @forelse($movements as $mov)
-                                    <tr class="hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-zinc-500 dark:text-zinc-400">
-                                            {{ $mov->created_at->format('H:i') }}
-                                        </td>
-                                        <td class="px-6 py-4">
-                                            <div class="flex items-center gap-2">
-                                                @if($mov->type->value === 'income')
-                                                    <flux:icon.arrow-up-right class="size-4 text-emerald-500 shrink-0" />
-                                                @else
-                                                    <flux:icon.arrow-down-right class="size-4 text-red-500 shrink-0" />
-                                                @endif
-                                                <div class="text-sm font-medium text-zinc-900 dark:text-white">
-                                                    {{ $mov->description ?: 'Venta' }}
-                                                    @if($mov->is_manual)
-                                                        <span class="ml-2 inline-flex items-center rounded-md bg-zinc-100 px-1.5 py-0.5 text-[10px] font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">MANUAL</span>
+                                <tbody class="divide-y divide-zinc-200 dark:divide-zinc-700 bg-white dark:bg-zinc-900">
+                                    @php
+                                        $groupedMovements = collect();
+                                        if($movements) {
+                                            $groupedMovements = collect($movements->items())->groupBy(function ($item) {
+                                                return $item->transaction_group_id ?? $item->id;
+                                            });
+                                        }
+                                    @endphp
+
+                                    @forelse($groupedMovements as $groupKey => $group)
+                                        @if($group->count() > 1 && $groupKey != $group->first()->id)
+                                            <tr class="bg-indigo-50/20 hover:bg-indigo-50/50 dark:bg-indigo-900/10 dark:hover:bg-indigo-900/20 transition-colors">
+                                                <td class="px-6 py-4 whitespace-nowrap text-sm text-zinc-500 dark:text-zinc-400">
+                                                    {{ $group->first()->created_at->format('H:i') }}
+                                                </td>
+                                                <td class="px-6 py-4">
+                                                    <div class="flex items-start gap-2">
+                                                        <div class="pt-1">
+                                                            @if($group->first()->type->value === 'income')
+                                                                <flux:icon.arrow-up-right class="size-4 text-emerald-500 shrink-0" />
+                                                            @else
+                                                                <flux:icon.arrow-down-right class="size-4 text-red-500 shrink-0" />
+                                                            @endif
+                                                        </div>
+                                                        <div class="text-sm font-medium text-zinc-900 dark:text-white w-full">
+                                                            {{ $group->first()->description ?: 'Operación Múltiple' }}
+                                                            <div class="mt-2.5 space-y-2 border-l-2 border-indigo-200/50 dark:border-indigo-800/50 pl-3 ml-1">
+                                                                @foreach($group as $sub)
+                                                                    <div class="flex items-center text-[11px] w-full">
+                                                                        <span class="font-bold text-zinc-700 dark:text-zinc-300 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 px-1.5 py-0.5 rounded shadow-sm inline-block min-w-16 text-center">
+                                                                            {{ $sub->payment_method->label() }}
+                                                                        </span>
+                                                                        @if($sub->cardPlan)
+                                                                            <span class="text-zinc-500 ml-2 truncate max-w-32">
+                                                                                {{ $sub->cardPlan->card->name }} ({{ $sub->cardPlan->name }})
+                                                                            </span>
+                                                                        @endif
+                                                                        <span class="font-mono font-medium text-zinc-500 dark:text-zinc-400 ml-auto text-right tabular-nums">
+                                                                            ${{ number_format($sub->amount, 2) }}
+                                                                        </span>
+                                                                    </div>
+                                                                @endforeach
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td class="px-6 py-4 whitespace-nowrap">
+                                                    <div class="text-xs text-indigo-600/70 dark:text-indigo-400/70 font-bold tracking-wider uppercase">
+                                                        Pago Combinado
+                                                    </div>
+                                                </td>
+                                                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-bold {{ $group->first()->type->value === 'income' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400' }}">
+                                                    {{ $group->first()->type->value === 'income' ? '+' : '-' }}${{ number_format($group->sum('amount'), 2) }}
+                                                </td>
+                                            </tr>
+                                        @else
+                                            @php $mov = $group->first(); @endphp
+                                            <tr class="hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
+                                                <td class="px-6 py-4 whitespace-nowrap text-sm text-zinc-500 dark:text-zinc-400">
+                                                    {{ $mov->created_at->format('H:i') }}
+                                                </td>
+                                                <td class="px-6 py-4">
+                                                    <div class="flex items-center gap-2">
+                                                        @if($mov->type->value === 'income')
+                                                            <flux:icon.arrow-up-right class="size-4 text-emerald-500 shrink-0" />
+                                                        @else
+                                                            <flux:icon.arrow-down-right class="size-4 text-red-500 shrink-0" />
+                                                        @endif
+                                                        <div class="text-sm font-medium text-zinc-900 dark:text-white">
+                                                            {{ $mov->description ?: 'Venta' }}
+                                                            @if($mov->is_manual)
+                                                                <span class="ml-2 inline-flex items-center rounded-md bg-zinc-100 px-1.5 py-0.5 text-[10px] font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">MANUAL</span>
+                                                            @endif
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td class="px-6 py-4 whitespace-nowrap">
+                                                    <div class="text-sm text-zinc-900 dark:text-zinc-200">
+                                                        {{ $mov->payment_method->label() }}
+                                                    </div>
+                                                    @if($mov->cardPlan)
+                                                        <div class="text-[10px] text-zinc-500">
+                                                            {{ $mov->cardPlan->card->name }} ({{ $mov->cardPlan->name }})
+                                                        </div>
                                                     @endif
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap">
-                                            <div class="text-sm text-zinc-900 dark:text-zinc-200">
-                                                {{ $mov->payment_method->label() }}
-                                            </div>
-                                            @if($mov->cardPlan)
-                                                <div class="text-[10px] text-zinc-500">
-                                                    {{ $mov->cardPlan->card->name }} ({{ $mov->cardPlan->name }})
-                                                </div>
-                                            @endif
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-bold {{ $mov->type->value === 'income' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400' }}">
-                                            {{ $mov->type->value === 'income' ? '+' : '-' }}${{ number_format($mov->amount, 2) }}
-                                        </td>
-                                    </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="4" class="px-6 py-8 text-center text-sm text-zinc-500 dark:text-zinc-400">
-                                            Sin movimientos en este turno.
-                                        </td>
-                                    </tr>
-                                @endforelse
-                            </tbody>
+                                                </td>
+                                                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-bold {{ $mov->type->value === 'income' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400' }}">
+                                                    {{ $mov->type->value === 'income' ? '+' : '-' }}${{ number_format($mov->amount, 2) }}
+                                                </td>
+                                            </tr>
+                                        @endif
+                                    @empty
+                                        <tr>
+                                            <td colspan="4" class="px-6 py-8 text-center text-sm text-zinc-500 dark:text-zinc-400">
+                                                Sin movimientos en este turno.
+                                            </td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
                         </table>
                     </div>
                     

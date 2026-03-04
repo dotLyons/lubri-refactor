@@ -3,16 +3,12 @@
 namespace App\Livewire\WorkOrders;
 
 use App\Src\Inventory\Models\Product;
-use App\Src\POS\Actions\RegisterMovement;
-use App\Src\POS\Enums\MovementType;
-use App\Src\POS\Enums\PaymentMethod;
-use App\Src\POS\Models\CashRegister;
+use App\Src\Inventory\Models\StockMovement;
+use App\Src\Invoices\Models\Invoice;
 use App\Src\WorkOrders\Enums\WorkOrderStatus;
 use App\Src\WorkOrders\Models\WorkOrder;
 use Exception;
 use Flux\Flux;
-use App\Src\POS\Models\Card;
-use App\Src\POS\Models\CardPlan;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Livewire\Component;
@@ -23,33 +19,19 @@ class Edit extends Component
     use WithPagination;
 
     public ?WorkOrder $workOrder = null;
-    
+
     public $scheduled_at;
-    
+
     public $items = [];
+
     public $productSearch = '';
-    
-    public $paymentMethod = 'cash';
-    public $selectedCardId = '';
-    public $selectedPlanId = '';
-
-    public function updatedPaymentMethod()
-    {
-        $this->selectedCardId = '';
-        $this->selectedPlanId = '';
-    }
-
-    public function updatedSelectedCardId()
-    {
-        $this->selectedPlanId = '';
-    }
 
     public function mount($id)
     {
         $this->workOrder = WorkOrder::with(['customer', 'vehicle', 'items.product.stock'])->findOrFail($id);
-        
+
         $this->scheduled_at = $this->workOrder->scheduled_at->format('Y-m-d\TH:i');
-        
+
         $this->refreshItems();
     }
 
@@ -84,16 +66,21 @@ class Edit extends Component
 
     public function addItem($productId)
     {
-        if ($this->workOrder->status->value === 'closed') return;
+        if ($this->workOrder->status->value === 'closed') {
+            return;
+        }
 
         $quantityToAdd = 1;
 
         $product = Product::with('stock')->find($productId);
-        if (!$product) return;
+        if (! $product) {
+            return;
+        }
 
         $stockAvailable = $product->stock ? $product->stock->quantity : 0;
         if ($quantityToAdd > $stockAvailable) {
-            Flux::toast('Stock insuficiente. Solo quedan ' . $stockAvailable . ' unidades de ' . $product->product_name . '.', variant: 'danger');
+            Flux::toast('Stock insuficiente. Solo quedan '.$stockAvailable.' unidades de '.$product->product_name.'.', variant: 'danger');
+
             return;
         }
 
@@ -115,28 +102,46 @@ class Edit extends Component
                 $product->stock->update([
                     'quantity' => $product->stock->quantity - $quantityToAdd,
                 ]);
+
+                StockMovement::create([
+                    'product_id' => $product->id,
+                    'user_id' => Auth::id(),
+                    'type' => 'out',
+                    'quantity' => $quantityToAdd,
+                    'reason' => 'Uso en Orden de Trabajo #'.$this->workOrder->id,
+                ]);
             }
         });
 
         $this->workOrder->refresh();
         $this->refreshItems();
-        
+
         $this->dispatch('work-order-updated');
         Flux::toast('Producto agregado correctamente.');
     }
 
     public function removeItem($itemId)
     {
-        if ($this->workOrder->status->value === 'closed') return;
+        if ($this->workOrder->status->value === 'closed') {
+            return;
+        }
 
         $item = $this->workOrder->items()->find($itemId);
-        
+
         if ($item) {
             DB::transaction(function () use ($item) {
                 $product = $item->product;
                 if ($product->stock) {
                     $product->stock->update([
                         'quantity' => $product->stock->quantity + $item->quantity,
+                    ]);
+
+                    StockMovement::create([
+                        'product_id' => $product->id,
+                        'user_id' => Auth::id(),
+                        'type' => 'in',
+                        'quantity' => $item->quantity,
+                        'reason' => 'Devolución de Orden de Trabajo #'.$this->workOrder->id,
                     ]);
                 }
                 $item->delete();
@@ -150,33 +155,45 @@ class Edit extends Component
 
     public function updateItemQuantity($itemId, $newQuantity)
     {
-        if ($this->workOrder->status->value === 'closed') return;
-        
+        if ($this->workOrder->status->value === 'closed') {
+            return;
+        }
+
         $newQuantity = (int) $newQuantity;
 
         if ($newQuantity <= 0) {
             $this->removeItem($itemId);
+
             return;
         }
 
         $item = $this->workOrder->items()->with('product.stock')->find($itemId);
         if ($item) {
             $difference = $newQuantity - (int) $item->quantity;
-            
+
             if ($difference > 0) {
                 $stockAvailable = $item->product->stock ? $item->product->stock->quantity : 0;
                 if ($difference > $stockAvailable) {
-                    Flux::toast('Stock insuficiente. Solo te quedan ' . $stockAvailable . ' unidades extra disponibles en el inventario para poder sumar.', variant: 'danger');
+                    Flux::toast('Stock insuficiente. Solo te quedan '.$stockAvailable.' unidades extra disponibles en el inventario para poder sumar.', variant: 'danger');
                     $this->refreshItems();
+
                     return;
                 }
             }
-            
+
             DB::transaction(function () use ($item, $newQuantity, $difference) {
                 $product = $item->product;
                 if ($product->stock) {
                     $product->stock->update([
                         'quantity' => $product->stock->quantity - $difference,
+                    ]);
+
+                    StockMovement::create([
+                        'product_id' => $product->id,
+                        'user_id' => Auth::id(),
+                        'type' => $difference > 0 ? 'out' : 'in',
+                        'quantity' => abs($difference),
+                        'reason' => ($difference > 0 ? 'Adición extra a Uso' : 'Devolución parcial').' en Orden de Trabajo #'.$this->workOrder->id,
                     ]);
                 }
 
@@ -191,101 +208,62 @@ class Edit extends Component
         }
     }
 
-    public function chargeAndClose()
+    public function generateInvoice()
     {
-        if ($this->workOrder->status->value === 'closed') return;
-        
-        $baseTotalAmount = $this->workOrder->total_amount;
-        $totalAmount = $baseTotalAmount;
-
-        if (in_array($this->paymentMethod, ['credit_card', 'debit_card']) && $this->selectedPlanId) {
-            $plan = CardPlan::find($this->selectedPlanId);
-            if ($plan) {
-                $surcharge = ($baseTotalAmount * $plan->surcharge_percentage) / 100;
-                $totalAmount = $baseTotalAmount + $surcharge;
-            }
-        }
-        
-        if ($totalAmount <= 0) {
-            session()->flash('error_payment', 'No se puede cobrar una orden con total 0.');
+        if ($this->workOrder->status->value === 'closed') {
             return;
         }
 
-        if (in_array($this->paymentMethod, ['credit_card', 'debit_card']) && !$this->selectedPlanId) {
-            session()->flash('error_payment', 'Debe seleccionar un plan de cuotas para el pago con tarjeta.');
+        $totalAmount = $this->workOrder->total_amount;
+
+        if ($totalAmount <= 0) {
+            session()->flash('error_payment', 'No se puede facturar una orden con total 0.');
+
             return;
         }
 
         try {
-            DB::transaction(function () use ($totalAmount) {
-                $registerMovement = new RegisterMovement();
-                $registerMovement->execute(
-                    user: Auth::user(),
-                    type: MovementType::Income,
-                    amount: $totalAmount,
-                    paymentMethod: PaymentMethod::from($this->paymentMethod),
-                    cardPlanId: $this->selectedPlanId ?: null, 
-                    description: "Cobro Orden de Trabajo #" . $this->workOrder->id . " - " . $this->workOrder->vehicle->license_plate,
-                    isManual: false 
-                );
+            $invoice = DB::transaction(function () use ($totalAmount) {
+                $invoice = Invoice::create([
+                    'customer_id' => $this->workOrder->customer_id,
+                    'work_order_id' => $this->workOrder->id,
+                    'total_amount' => $totalAmount,
+                    'paid_amount' => 0,
+                    'balance_due' => $totalAmount,
+                    'status' => 'pending',
+                ]);
 
                 $this->workOrder->update([
                     'status' => WorkOrderStatus::Closed,
                 ]);
+
+                return $invoice;
             });
 
-            session()->flash('success_payment', 'Orden cerrada y cobrada con éxito.');
-            return redirect()->route('work-orders.index');
+            return redirect()->route('invoices.pay', $invoice->id);
 
         } catch (Exception $e) {
-            session()->flash('error_payment', $e->getMessage());
+            session()->flash('error_payment', 'Error al generar la factura: '.$e->getMessage());
         }
     }
 
     public function render()
     {
         $productsQuery = Product::with('stock');
-        
+
         if ($this->productSearch !== '') {
-            $productsQuery->where(function($q) {
+            $productsQuery->where(function ($q) {
                 $q->where('product_name', 'like', "%{$this->productSearch}%")
-                  ->orWhere('product_code', 'like', "%{$this->productSearch}%")
-                  ->orWhere('bar_code', 'like', "%{$this->productSearch}%");
+                    ->orWhere('product_code', 'like', "%{$this->productSearch}%")
+                    ->orWhere('bar_code', 'like', "%{$this->productSearch}%");
             });
         }
-        
+
         $modalProducts = $productsQuery->paginate(10, ['*'], 'productPage');
 
-        $cards = collect();
-        $plans = collect();
-        
-        if ($this->paymentMethod === 'credit_card' || $this->paymentMethod === 'debit_card') {
-            $type = $this->paymentMethod === 'credit_card' ? 'credit' : 'debit';
-            $cards = Card::where('type', $type)->where('is_active', true)->get();
-        }
-
-        if ($this->selectedCardId) {
-            $plans = CardPlan::where('card_id', $this->selectedCardId)->where('is_active', true)->get();
-        }
-
-        $baseTotalAmount = $this->workOrder?->total_amount ?? 0;
-        $totalAmount = $baseTotalAmount;
-        $surchargeAmount = 0;
-
-        if (in_array($this->paymentMethod, ['credit_card', 'debit_card']) && $this->selectedPlanId) {
-            $plan = CardPlan::find($this->selectedPlanId);
-            if ($plan) {
-                $surchargeAmount = ($baseTotalAmount * $plan->surcharge_percentage) / 100;
-                $totalAmount = $baseTotalAmount + $surchargeAmount;
-            }
-        }
-
         return view('livewire.work-orders.edit', [
-            'baseTotalAmount' => $baseTotalAmount,
-            'totalAmount' => $totalAmount,
-            'surchargeAmount' => $surchargeAmount,
-            'cards' => $cards,
-            'plans' => $plans,
+            'baseTotalAmount' => $this->workOrder?->total_amount ?? 0,
+            'totalAmount' => $this->workOrder?->total_amount ?? 0,
             'modalProducts' => $modalProducts,
         ]);
     }
