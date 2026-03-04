@@ -60,6 +60,14 @@
                     {{ __('Tarjetas') }}
                 </flux:sidebar.item>
             </flux:sidebar.group>
+
+            <flux:sidebar.item icon="users" :href="route('customers.index')" :current="request()->routeIs('customers.*')" wire:navigate>
+                {{ __('Clientes') }}
+            </flux:sidebar.item>
+
+            <flux:sidebar.item icon="document-text" :href="route('work-orders.index')" :current="request()->routeIs('work-orders.*')" wire:navigate>
+                {{ __('Órdenes de Trabajo') }}
+            </flux:sidebar.item>
         </flux:sidebar.nav>
 
         <flux:spacer />

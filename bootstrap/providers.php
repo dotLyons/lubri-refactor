@@ -6,4 +6,6 @@ return [
     App\Src\Foundation\Providers\FoundationServiceProvider::class,
     App\Src\Inventory\Providers\InventoryServiceProvider::class,
     App\Src\POS\Providers\PosServiceProvider::class,
+    App\Src\Customers\Providers\CustomersServiceProvider::class,
+    App\Src\WorkOrders\Providers\WorkOrdersServiceProvider::class,
 ];

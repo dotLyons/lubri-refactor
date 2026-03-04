@@ -44,4 +44,16 @@ Route::get('pos/register', App\Livewire\POS\Register\Index::class)
     ->middleware(['auth', 'verified'])
     ->name('pos.register.index');
 
+Route::get('customers', App\Livewire\Customers\Index::class)
+    ->middleware(['auth', 'verified'])
+    ->name('customers.index');
+
+Route::get('work-orders', App\Livewire\WorkOrders\Index::class)
+    ->middleware(['auth', 'verified'])
+    ->name('work-orders.index');
+
+Route::get('work-orders/{id}/manage', App\Livewire\WorkOrders\Edit::class)
+    ->middleware(['auth', 'verified'])
+    ->name('work-orders.edit');
+
 require __DIR__ . '/settings.php';
