@@ -39,4 +39,23 @@ class Customer extends Model
     {
         return $this->hasMany(Vehicle::class);
     }
+
+    /**
+     * Get the current account movements for this customer.
+     */
+    public function accountMovements(): HasMany
+    {
+        return $this->hasMany(CustomerAccountMovement::class);
+    }
+
+    /**
+     * Get the current account balance (negative = owes money).
+     */
+    public function getAccountBalanceAttribute(): float
+    {
+        $credits = $this->accountMovements()->where('type', 'credit')->sum('amount');
+        $debits = $this->accountMovements()->where('type', 'debit')->sum('amount');
+
+        return $credits - $debits;
+    }
 }

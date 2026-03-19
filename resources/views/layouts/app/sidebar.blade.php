@@ -63,6 +63,10 @@
                     :current="request()->routeIs('pos.invoices.*') || request()->routeIs('invoices.pay')" wire:navigate>
                     {{ __('Facturación') }}
                 </flux:sidebar.item>
+                <flux:sidebar.item icon="banknotes" :href="route('pos.current-account.index')"
+                    :current="request()->routeIs('pos.current-account.index')" wire:navigate>
+                    {{ __('Cuenta Corriente') }}
+                </flux:sidebar.item>
             </flux:sidebar.group>
 
             <flux:sidebar.item icon="users" :href="route('customers.index')" :current="request()->routeIs('customers.*')" wire:navigate>

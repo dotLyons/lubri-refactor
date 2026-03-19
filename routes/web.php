@@ -42,6 +42,14 @@ Route::get('pos/register', App\Livewire\POS\Register\Index::class)
     ->middleware(['auth', 'verified'])
     ->name('pos.register.index');
 
+Route::get('pos/current-account', App\Livewire\POS\CurrentAccount\Index::class)
+    ->middleware(['auth', 'verified'])
+    ->name('pos.current-account.index');
+
+Route::get('pos/current-account/{payment}/pdf', [App\Http\Controllers\POS\CurrentAccountPdfController::class, 'download'])
+    ->middleware(['auth', 'verified'])
+    ->name('pos.current-account.pdf');
+
 Route::get('customers', App\Livewire\Customers\Index::class)
     ->middleware(['auth', 'verified'])
     ->name('customers.index');

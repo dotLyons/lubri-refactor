@@ -8,6 +8,7 @@ enum PaymentMethod: string
     case Transfer = 'transfer';
     case DebitCard = 'debit_card';
     case CreditCard = 'credit_card';
+    case CurrentAccount = 'current_account';
 
     public function label(): string
     {
@@ -16,6 +17,7 @@ enum PaymentMethod: string
             self::Transfer => 'Transferencia',
             self::DebitCard => 'Tarjeta de Débito',
             self::CreditCard => 'Tarjeta de Crédito',
+            self::CurrentAccount => 'Cuenta Corriente',
         };
     }
 }
